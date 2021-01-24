@@ -9,131 +9,140 @@ import mimetypes
 
 def copy_file(file, path):
     try:
-        cp(f'{path}{file}', 'notes/resource/')
+        cp(f"{path}{file}", "notes/resource/")
     except FileNotFoundError:
         print(f'File "{file}" not found in {path}')
         return False
     else:
         return True
 
+
 def read_annotations(list) -> str:
-    annotations_list = '*Weblinks:*'
+    annotations_list = "*Weblinks:*"
     for entry in list:
-        if entry['source'] == 'WEBLINK':
-            title = entry['title']
-            url = entry['url']
-            annotations_list += f' [{title}]({url});'
+        if entry["source"] == "WEBLINK":
+            title = entry["title"]
+            url = entry["url"]
+            annotations_list += f" [{title}]({url});"
     return annotations_list
 
+
 def read_attachments(list, path) -> str:
-    attachments_list = '*Attachments:*\n'
+    attachments_list = "*Attachments:*\n"
     for entry in list:
-        if 'image' in entry['mimetype']:
-            image = entry['filePath']
+        if "image" in entry["mimetype"]:
+            image = entry["filePath"]
             if copy_file(image, path) is False:
                 # Falls die Datei nicht gefunden werden konnte,
                 # wird geprüft ob es die Datei unter einem
                 # anderen Dateiformat zufinden ist.
                 # Google benutzt '.jpeg' statt '.jpg' -- doof
-                image_type = mimetypes.guess_type(f'{path}{image}')
+                image_type = mimetypes.guess_type(f"{path}{image}")
                 types = mimetypes.guess_all_extensions(image_type[0])
                 for type in types:
                     if type in image:
-                        image_name = image.replace(type, '')
+                        image_name = image.replace(type, "")
                         for t in types:
-                            if len(glob.glob(f'{path}{image_name}{t}')) > 0:
-                                image = f'{image_name}{t}'
+                            if len(glob.glob(f"{path}{image_name}{t}")) > 0:
+                                image = f"{image_name}{t}"
                                 print(f'Found "{image}"')
                                 copy_file(image, path)
-            attachments_list += f'![{image}](resource/{image})\n'
+            attachments_list += f"![{image}](resource/{image})\n"
     return attachments_list
 
+
 def read_tasklist(list) -> str:
-    content_list = '*Tasklist:*\n'
+    content_list = "*Tasklist:*\n"
     for entry in list:
-        text = entry['text']
-        if entry['isChecked'] is True:
-            content_list += f'- [x] {text}\n'
+        text = entry["text"]
+        if entry["isChecked"] is True:
+            content_list += f"- [x] {text}\n"
         else:
-            content_list += f'- [ ] {text}\n'
+            content_list += f"- [ ] {text}\n"
     return content_list
 
+
 def read_tags(tags) -> str:
-    tag_list = 'tags:'
+    tag_list = "tags:"
     for entry in tags:
-        tag = entry['name']
-        tag_list += f' {tag};'
+        tag = entry["name"]
+        tag_list += f" {tag};"
     return tag_list
 
-def read_write_notes(path):
-    notes = glob.glob(f'{path}/*.json')
-    for note in notes:
-        with open(note, 'r') as jsonfile:
-            data = json.load(jsonfile)
-            timestamp = data['userEditedTimestampUsec']
-            if timestamp == 0:
-                iso_datetime = dt.now().strftime('%Y-%m-%d %H:%M:%S edited')
-            else:
-                iso_datetime = dt.fromtimestamp(timestamp/1000000).strftime('%Y-%m-%d %H:%M:%S')
 
-            if data['title'] != '':
-                title = str(data['title']).replace('/', '_')
+def read_write_notes(path):
+    notes = glob.glob(f"{path}/*.json")
+    for note in notes:
+        with open(note, "r") as jsonfile:
+            data = json.load(jsonfile)
+            timestamp = data["userEditedTimestampUsec"]
+            if timestamp == 0:
+                iso_datetime = dt.now().strftime("%Y-%m-%d %H:%M:%S edited")
+            else:
+                iso_datetime = dt.fromtimestamp(timestamp / 1000000).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+
+            if data["title"] != "":
+                title = str(data["title"]).replace("/", "_")
                 if len(title) > 100:
                     title = title[0:99]
             else:
                 title = iso_datetime
 
-            if not os.path.exists(f'notes/{title}.md'):
-                print(f'Convert: {title}')
-                with open(f'notes/{title}.md', 'w') as mdfile:
-                    mdfile.write(f'---\n')
-                    mdfile.write(f'title: {title}\n')
-                    if (title != iso_datetime):
-                        mdfile.write(f'date: {iso_datetime}\n')
+            if not os.path.exists(f"notes/{title}.md"):
+                print(f"Convert: {title}")
+                with open(f"notes/{title}.md", "w") as mdfile:
+                    mdfile.write(f"---\n")
+                    mdfile.write(f"title: {title}\n")
+                    if title != iso_datetime:
+                        mdfile.write(f"date: {iso_datetime}\n")
                     # add tags
                     try:
-                        tags = read_tags(data['labels'])
-                        mdfile.write(f'{tags}\n')
+                        tags = read_tags(data["labels"])
+                        mdfile.write(f"{tags}\n")
                     except KeyError:
-                        print('No tags available.')
-                    mdfile.write(f'---\n\n')
+                        print("No tags available.")
+                    mdfile.write(f"---\n\n")
                     # add text content
                     try:
-                        textContent = data['textContent']
-                        mdfile.write(f'{textContent}\n\n')
+                        textContent = data["textContent"]
+                        mdfile.write(f"{textContent}\n\n")
                     except KeyError:
-                        print('No text content available.')
+                        print("No text content available.")
                     # add tasklist
                     try:
-                        tasklist = read_tasklist(data['listContent'])
-                        mdfile.write(f'{tasklist}\n\n')
+                        tasklist = read_tasklist(data["listContent"])
+                        mdfile.write(f"{tasklist}\n\n")
                     except KeyError:
-                        print('No tasklist available.')
+                        print("No tasklist available.")
                     # add annotations
                     try:
-                        annotations = read_annotations(data['annotations'])
-                        mdfile.write(f'{annotations}')
+                        annotations = read_annotations(data["annotations"])
+                        mdfile.write(f"{annotations}")
                     except KeyError:
-                        print('No annotations available.')
+                        print("No annotations available.")
                     # add attachments
                     try:
-                        attachments = read_attachments(data['attachments'], path)
-                        mdfile.write(f'{attachments}')
+                        attachments = read_attachments(data["attachments"], path)
+                        mdfile.write(f"{attachments}")
                     except KeyError:
-                        print('No attachments available.')
+                        print("No attachments available.")
             else:
                 print(f'File "{title}" exists!')
 
+
 def create_folder():
     try:
-        os.makedirs('notes/resource')
+        os.makedirs("notes/resource")
         print('Create folder "notes" - home of markdown files.')
     except OSError:
-        print('Creation of folders failed.')
+        print("Creation of folders failed.")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     create_folder()
     try:
         read_write_notes(sys.argv[1])
     except IndexError:
-        print('Please enter a correct path!')
+        print("Please enter a correct path!")
